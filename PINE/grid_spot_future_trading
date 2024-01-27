@@ -1,0 +1,244 @@
+// 做多/现货网格,收盘价低于网格线就买入/做多，高于网格线就卖出/平多
+// 每一笔的利润大于等于一个网格大小，没有止损
+// 只适合横盘和上涨行情，不适合单边下跌行情
+
+//@version=5
+strategy(title = 'Grid Spot/Furure Trading', 
+     overlay = true,
+     calc_on_every_tick = true,
+     initial_capital = 10000, 
+     commission_type = strategy.commission.percent, 
+     commission_value = 0.03, 
+     pyramiding = 50,
+     default_qty_type = strategy.percent_of_equity,
+     process_orders_on_close = true, 
+     close_entries_rule = 'ANY')
+
+//---------------------------------------------------------------
+
+beginDate = input.int(title="BEGIN DAY DATE",defval=11, minval=1, maxval=31)
+beginMonth = input.int(title="BEGIN MONTH",defval=12, minval=1, maxval=12)
+beginYear = input.int(title="BEGIN YEAR",defval=2023, minval=1800, maxval=2100)
+
+endDate = input.int(title="END DAY DATE",defval=7, minval=1, maxval=31)
+endMonth = input.int(title="END MONTH",defval=1, minval=1, maxval=12)
+endYear = input.int(title="END YEAR",defval=2024, minval=1800, maxval=2100)
+
+inDateRange = (time >= timestamp(syminfo.timezone, beginYear,beginMonth, beginDate, 0, 0)) and
+     (time < timestamp(syminfo.timezone, endYear, endMonth, endDate, 0, 0))
+
+//---------------------------------------------------------------
+
+UpperLimit  = input.price(defval = 0.00, title = 'High price: ', group = "TOP PRICE GRID", confirm = true, tooltip = "Top grid price.")
+LowerLimit = input.price(defval = 0.00, title = 'Low price: ',  group = "BOTTOM PRICE GRID", confirm = true, tooltip = "Bottom grid price.")
+leverage = input.float(defval = 1.0, minval = 0.00, maxval = 10, title = 'Leverage:',tooltip = "Default use x1 leverage.")
+feePerTrade = input.float(defval = 0.03, minval = 0.00, maxval = 100,title = "FEE PER TRADE", group = "2. GRID CUSTOM SETTING",tooltip = "Set the commission cost your broker charges you for each trade.",confirm = true)
+
+
+
+//---------------------------------------------------------------
+
+batch = (UpperLimit - LowerLimit)/10
+
+Linea_1         = float(UpperLimit - batch * 1)
+Linea_2         = float(UpperLimit - batch * 2)
+Linea_3         = float(UpperLimit - batch * 3)
+Linea_4         = float(UpperLimit - batch * 4)
+Linea_mid       = float(UpperLimit - batch * 5)
+Linea_5         = float(UpperLimit - batch * 6)
+Linea_6         = float(UpperLimit - batch * 7)
+Linea_7         = float(UpperLimit - batch * 8)
+Linea_8         = float(UpperLimit - batch * 9)
+
+//---------------------------------------------------------------
+
+Long1   = ta.crossunder(close, Linea_1)         and inDateRange
+Long2   = ta.crossunder(close, Linea_2)         and inDateRange
+Long3   = ta.crossunder(close, Linea_3)         and inDateRange
+Long4   = ta.crossunder(close, Linea_4)         and inDateRange
+Long5   = ta.crossunder(close, Linea_mid) and inDateRange
+Long6   = ta.crossunder(close, Linea_5)         and inDateRange
+Long7   = ta.crossunder(close, Linea_6)         and inDateRange
+Long8   = ta.crossunder(close, Linea_7)         and inDateRange
+Long9   = ta.crossunder(close, Linea_8)         and inDateRange
+Long10  = ta.crossunder(close, LowerLimit)      and inDateRange
+
+//---------------------------------------------------------------
+
+isExit1     = ta.crossover(close, UpperLimit)
+isExit2     = ta.crossover(close, Linea_1)
+isExit3     = ta.crossover(close, Linea_2)
+isExit4     = ta.crossover(close, Linea_3)
+isExit5     = ta.crossover(close, Linea_4)
+isExit6     = ta.crossover(close, Linea_mid)
+isExit7     = ta.crossover(close, Linea_5)
+isExit8     = ta.crossover(close, Linea_6)
+isExit9     = ta.crossover(close, Linea_7)
+isExit10    = ta.crossover(close, Linea_8)
+
+//---------------------------------------------------------------
+
+plot(LowerLimit,        color =  color.purple,  linewidth = 2)
+plot(UpperLimit,        color =  color.purple,  linewidth = 2)
+
+plot(Linea_1,           color =  color.blue,  linewidth = 1)
+plot(Linea_2,           color =  color.blue,  linewidth = 1)
+plot(Linea_3,           color =  color.blue,  linewidth = 1)
+plot(Linea_4,           color =  color.blue,  linewidth = 1)
+plot(Linea_mid,   color =  color.blue,  linewidth = 1)
+plot(Linea_5,           color =  color.blue,  linewidth = 1)
+plot(Linea_6,           color =  color.blue,  linewidth = 1)
+plot(Linea_7,           color =  color.blue,  linewidth = 1)
+plot(Linea_8,           color =  color.blue,  linewidth = 1)
+
+//---------------------------------------------------------------
+
+fill(plot(UpperLimit), 
+     plot(Linea_1), 
+         color = color.new(color.purple, 90))
+fill(plot(Linea_1), 
+     plot(Linea_2), 
+         color = color.new(color.purple, 85))
+fill(plot(Linea_2), 
+     plot(Linea_3), 
+         color = color.new(color.purple, 80))
+fill(plot(Linea_3), 
+     plot(Linea_4), 
+         color = color.new(color.purple, 70))
+fill(plot(Linea_4), 
+     plot(Linea_mid), 
+         color = color.new(color.purple, 60))
+fill(plot(Linea_mid), 
+     plot(Linea_5), 
+         color = color.new(color.purple, 60))
+fill(plot(Linea_5), 
+     plot(Linea_6), 
+         color = color.new(color.purple, 70))
+fill(plot(Linea_6), 
+     plot(Linea_7), 
+         color = color.new(color.purple, 80))
+fill(plot(Linea_7), 
+     plot(Linea_8), 
+         color = color.new(color.purple, 85))
+fill(plot(Linea_8), 
+     plot(LowerLimit), 
+         color = color.new(color.purple, 90))
+
+//---------------------------------------------------------------
+
+var float lots = 0
+var float account_balance = 0 
+
+
+account_balance := strategy.equity
+lots := (account_balance / close) / 10
+
+if Long1
+    strategy.entry(id = "LONG1", 
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit1 
+    strategy.exit(id = "EXIT1",
+         from_entry = "LONG1", 
+             qty = 100, 
+                 stop = UpperLimit,
+                 profit = UpperLimit)
+
+if Long2 
+    strategy.entry(id = "LONG2",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit2 
+    strategy.exit(id = "EXIT2",
+         from_entry = "LONG2", 
+             qty = 100, 
+                 stop = Linea_1,
+                 limit = Linea_1)
+
+if Long3
+    strategy.entry(id = "LONG3",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit3 
+    strategy.exit(id = "EXIT3",
+         from_entry = "LONG3", 
+             qty = 100, 
+                 stop = Linea_2,
+                 limit = Linea_2)
+
+if Long4 
+    strategy.entry(id = "LONG4",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit4 
+    strategy.exit(id = "EXIT4",
+         from_entry = "LONG4", 
+             qty = 100, 
+                 stop = Linea_3,
+                 limit = Linea_3)
+
+if Long5 
+    strategy.entry(id = "LONG5",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit5 
+    strategy.exit(id = "EXIT5",
+         from_entry = "LONG5", 
+             qty = 100, 
+                 stop = Linea_4,
+                 limit = Linea_4)
+
+if Long6 
+    strategy.entry(id = "LONG6",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit6 
+    strategy.exit(id = "EXIT6",
+         from_entry = "LONG6", 
+             qty = 100, 
+                 stop = Linea_mid,
+                 limit = Linea_mid)
+
+if Long7 
+    strategy.entry(id = "LONG7",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit7 
+    strategy.exit(id = "EXIT7",
+         from_entry = "LONG7", 
+             qty = 100, 
+                 stop  = Linea_5,
+                 limit = Linea_5)
+
+if Long8 
+    strategy.entry(id = "LONG8",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit8 
+    strategy.exit(id = "EXIT8",
+         from_entry = "LONG8", 
+             qty = 100, 
+                 stop = Linea_6,
+                 limit = Linea_6)
+
+if Long9
+    strategy.entry(id = "LONG9",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit9 
+    strategy.exit(id = "EXIT9",
+         from_entry = "LONG9", 
+             qty = 100, 
+                 stop = Linea_7,
+                 limit = Linea_7)
+
+if Long10 
+    strategy.entry(id = "LONG10",  
+         direction = strategy.long, 
+                 qty = lots*leverage)
+if isExit10
+    strategy.exit(id = "EXIT10",
+         from_entry = "LONG10", 
+             qty = 100, 
+                 stop = Linea_8,
+                 limit = Linea_8)
